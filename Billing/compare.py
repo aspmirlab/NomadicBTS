@@ -38,8 +38,7 @@ while True:
 			new_subscriber_number = generator(7)
 			new_subscriber_pin = generator(6)
 			new_subscriber_name = str(generator(4))
-			imsi = compare[i]
-			imsis = 'IMSI' + imsi
+			imsis = 'IMSI' + compare_lists[i]
 
 			create_subscriber_command = 'target_term -run 6 "./nmcli.py sipauthserve subscribers create "{name}" {isdn} {msisdn}"'
 			create_subscriber_command = create_subscriber_command.format(name=new_subscriber_name, isdn=imsis, msisdn=new_subscriber_number)
