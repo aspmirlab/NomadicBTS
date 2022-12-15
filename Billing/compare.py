@@ -5,23 +5,24 @@ from subprocess import run, PIPE
 import time
 while True:
 
-	db0 = sqlite3.connect('/var/lib/asterisk/sqlite3dir/sqlite3.db')
-	db1 = sqlite3.connect('/var/run/TMSITable.db')
+	asterisk_db = sqlite3.connect('/var/lib/asterisk/sqlite3dir/sqlite3.db')
+	tmsi_db = sqlite3.connect('/var/run/TMSITable.db')
 
-	cursor0 = db0.cursor()
-	cursor1 = db1.cursor()
+	asterisk_db_cursor = asterisk_db.cursor()
+	tmsi_db_cursor = tmsi_db.cursor()
 
-	buddies = [buddies[0] for buddies in cursor0.execute('''select username 
+	usernames = [username[0].replace('IMSI', '') for username in asterisk_db_cursor.execute('''select username 
 															from SIP_BUDDIES''')]
-	bud = [x.replace('IMSI', '') for x in buddies]
-	tmsi = [tmsi[0] for tmsi in cursor1.execute('''select IMSI
+	
+	imsis = [imsi[0] for imsi in tmsi_db_cursor.execute('''select IMSI
 															from TMSI_TABLE''')]
 
 
-	compare = list(set(tmsi) - set(bud))
-	print ("[output]: ", compare)
-	db0.close()
-	db1.close()
+	compare_lists = list(set(imsis) - set(usernames))
+	print ("[output]: ", compare_lists)
+	
+	asterisk_db.close()
+	tmsi_db.close()
 
 
 	def generator(n):
@@ -29,30 +30,29 @@ while True:
 		r_end = (10**n)-1
 		return randint(r_start, r_end)
 
-	if not compare:
+	if not compare_lists:
 		print ("[INFO] No new subscriber")
 	else:
-		for i in range(len(compare)):
-			num = '130'
-			number = generator(7)
-			pin = generator(6)
-			name = generator(4)
-			name = str(name)
+		for i in range(len(compare_lists)):
+			operator_number = '130'
+			new_subscriber_number = generator(7)
+			new_subscriber_pin = generator(6)
+			new_subscriber_name = str(generator(4))
 			imsi = compare[i]
 			imsis = 'IMSI' + imsi
 
-			cdm = 'target_term -run 6 "./nmcli.py sipauthserve subscribers create "{name}" {isdn} {msisdn}"'
-			cdm = cdm.format(name = name, isdn = imsisc, msisdn = number)
-			cdm = ['/bin/bash', '-c', cdm]
-			o = subprocess.run(cdm, stdout = PIPE)
+			create_subscriber_command = 'target_term -run 6 "./nmcli.py sipauthserve subscribers create "{name}" {isdn} {msisdn}"'
+			create_subscriber_command = create_subscriber_command.format(name=new_subscriber_name, isdn=imsis, msisdn=new_subscriber_number)
+			create_subscriber_command = ['/bin/bash', '-c', create_subscriber_command]
+			create_subscriber_process = subprocess.run(create_subscriber_command, stdout = PIPE)
 
-			message = 'Registration success! number:{} pin{}'
-			message = message.format(number, pin)
-			dsn = 'target_term -run 4 sendsms {imsi} {num} {message}'
-			dsn = dsn.format(imsi=imsi, num=num, message=message)
-			cmd = [ '/bin/bash', '-c', dsn]
+			success_message = 'Registration success! number:{} pin{}'
+			success_message = success_message.format(new_subscriber_number, new_subscriber_pin)
+			send_subscriber_sms_command = 'target_term -run 4 sendsms {imsi} {operator_number} {message}'
+			send_subscriber_sms_command = send_subscriber_sms_command.format(imsi=imsi, operator_number=operator_number, message=success_message)
+			send_subscriber_sms_command = [ '/bin/bash', '-c', send_subscriber_sms_command]
 
-			band9 = subprocess.run(cmd, stdout = PIPE)
+			send_subscriber_sms_process = subprocess.run(send_subscriber_sms_command, stdout = PIPE)
 	print("===================================================")
 	print("===================================================")
 	print("                                                   ")
