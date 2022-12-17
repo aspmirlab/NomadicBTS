@@ -26,6 +26,10 @@ while True:
 
 
 	def generator(n):
+		# generator(n)
+		#
+		# Makes an integer of length n
+		# returning that integer
 		r_start = 10**(n-1)
 		r_end = (10**n)-1
 		return randint(r_start, r_end)
